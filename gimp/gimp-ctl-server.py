@@ -1,41 +1,10 @@
 ### PORT TO LISTEN ON
 PORT = 9090
 
-import sys, os, re, itertools        ### basic stuff
-import socket                        ### networking
-import threading, time               ### for thread control
+import sys, os, re, itertools        ### basic stuffW
 from gimpfu import *
 
-## pasted, because it's easier than writing this and importing it.
-def listen(port, action, shutdown = None, consume_size = 16, escape_string= "!X"):
-    ''' listen on a TCP port
-        port: the numerical port to listen on
-        action: a function with prototype `action(conn, data)`
-    '''
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        def consume():
-            while True:
-               conn, addr = sock.accept()
-               try:
-                   while True:
-                       data = conn.recv(consume_size).strip()
-                       if data:
-                           if (data == escape_string):
-                               conn.send('shutting down\n')
-                               return
-                           action(conn, data)
-                       else: break
-                   conn.send('done\n')
-               finally:
-                   conn.close()
-        sock.bind(('', int(port)))
-        sock.listen(5)
-        print("socket is listening on port ", port)
-        consume()
-    finally:
-        sock.close()
-        if shutdown: shutdown()
+exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared', 'sockets.py')).read())
 
 # detached from the plugin api so I can see if I can just run it as a startup script
 def startup_server():
@@ -79,4 +48,4 @@ def startup_server():
         print("stopping export server on ", PORT)
 
     print("starting export server on ", PORT)
-    listen(PORT, onexportrequest, onshutdown)
+    socket_listen(PORT, onexportrequest, onshutdown)

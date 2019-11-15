@@ -22,17 +22,6 @@ def cmd(port, content):
         sock.close()
 
 
-def msgstr():
-    if 'stop' in sys.argv:
-        return '!X'
-    else:
-        cmdstr = ''
-        if 'save' in sys.argv:
-            cmdstr += 'S'
-        if 'export' in sys.argv:
-            cmdstr += 'E'
-        return cmdstr
-
 def main():
     cmdstr = sys.argv[1]
     filepath = os.path.dirname(os.path.abspath(__file__))
@@ -49,8 +38,7 @@ def main():
         baseargs = [
             'gimp',
             '--batch-interpreter=python-fu-eval',
-            '-b',
-            batch_cmd
+            '-b', batch_cmd
             ]
         suppliedargs = []
         for arg in list(sys.argv[2:]):
@@ -68,11 +56,19 @@ def main():
                 child.kill()
             proc.kill()
         except psutil.NoSuchProcess:
-            print("no gimp process detected... just clening up")
+            print("no gimp process detected... just cleaning up")
         finally:
             os.remove(pidfilepath)
     elif cmdstr == 'send' :
-        cmd(PORT, msgstr())
+        cmdstr = ''
+        if 'stop' in sys.argv:
+            cmdstr = '!X'
+        else:
+            if 'save' in sys.argv:
+                cmdstr += 'S'
+            if 'export' in sys.argv:
+                cmdstr += 'E'
+        cmd(PORT, cmdstr)
 
 if __name__ == "__main__":
     main()
