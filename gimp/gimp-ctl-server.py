@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 ### PORT TO LISTEN ON
 PORT = 9090
 
@@ -39,8 +37,8 @@ def listen(port, action, shutdown = None, consume_size = 16, escape_string= "!X"
         sock.close()
         if shutdown: shutdown()
 
-
-def plugin_main(timg, tdrawable):
+# detached from the plugin api so I can see if I can just run it as a startup script
+def startup_server():
     def onexportrequest(conn, data):
         print("processing export server request", data)
         conn.send("data '%s'\n" % data)
@@ -84,17 +82,26 @@ def plugin_main(timg, tdrawable):
     listen(PORT, onexportrequest, onshutdown)
 
 
-register(
-        "export_server",
-        "Saves and export all working files by listening to a socket",
-        "Saves and export all working files by listening to a socket",
-        "Daniel Bertinshaw",
-        "Daniel Bertinshaw",
-        "2019",
-        "<Image>/Edit/Start Export Server",
-        "RGB*, GRAY*",
-        [],
-        [],
-        plugin_main)
+# exec(open("/home/daniel/Workspaces/3dModellingTest/ToolchainScripts/gimp/gimp-ctl-server.py").read()); startup_server();
 
-main()
+### Plugins mode deprecated:
+### this means no adding plusing to ~/.gimp-X.X/plug-ins
+### which is nicer all around, and less brittle
+
+# def plugin_main(timg, tdrawable):
+#     startup_server()
+#
+# register(
+#         "export_server",
+#         "Saves and export all working files by listening to a socket",
+#         "Saves and export all working files by listening to a socket",
+#         "Daniel Bertinshaw",
+#         "Daniel Bertinshaw",
+#         "2019",
+#         "<Image>/Edit/Start Export Server",
+#         "RGB*, GRAY*",
+#         [],
+#         [],
+#         plugin_main)
+#
+# main()
