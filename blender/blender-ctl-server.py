@@ -43,7 +43,7 @@ def listen(port, action, shutdown = None, consume_size = 16, escape_string= byte
         sock.close()
         if shutdown: shutdown()
 
-def server():
+def server_init():
     def reload_textures():
         for image in bpy.data.images:
             image.reload()
@@ -67,4 +67,4 @@ def server():
     listen(PORT, onrequest, onshutdown)
 
 
-threading.Thread(target=server, args=(), name="server_thread").start() ## TODO: make daemon thread
+threading.Thread(target=server_init, args=(), name="server_thread").start() ## TODO: make daemon thread

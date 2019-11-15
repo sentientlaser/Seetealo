@@ -80,28 +80,3 @@ def startup_server():
 
     print("starting export server on ", PORT)
     listen(PORT, onexportrequest, onshutdown)
-
-
-# exec(open("/home/daniel/Workspaces/3dModellingTest/ToolchainScripts/gimp/gimp-ctl-server.py").read()); startup_server();
-
-### Plugins mode deprecated:
-### this means no adding plusing to ~/.gimp-X.X/plug-ins
-### which is nicer all around, and less brittle
-
-# def plugin_main(timg, tdrawable):
-#     startup_server()
-#
-# register(
-#         "export_server",
-#         "Saves and export all working files by listening to a socket",
-#         "Saves and export all working files by listening to a socket",
-#         "Daniel Bertinshaw",
-#         "Daniel Bertinshaw",
-#         "2019",
-#         "<Image>/Edit/Start Export Server",
-#         "RGB*, GRAY*",
-#         [],
-#         [],
-#         plugin_main)
-#
-# main()
