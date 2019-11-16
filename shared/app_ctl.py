@@ -27,11 +27,20 @@ class AbstractApp:
         sigpack = this.sendsignal.pack(this.config.signal_command_mappings)
         this.sendsignal.invoke(sigpack, args)
 
+    def restart(this, args = None):
+        try:
+            this.shutdown()
+        except OSError:
+            pass
+        this.startup(args)
+
+
     def make_main_fn(this):
         return this.main.create({
             "startup"  : this.startup,
             "shutdown" : this.shutdown,
-            "signal"   : this.signal
+            "signal"   : this.signal,
+            "restart"  : this.restart
         })
 
 class Main:
