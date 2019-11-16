@@ -1,14 +1,17 @@
 ### PORT TO LISTEN ON
 PORT = 9090
 
-import sys, os, re, itertools        ### basic stuffW
+import sys, os, re, itertools, logging, time
 from gimpfu import *
 
+#### Gimp isn't releasing the port correctly
+
 socketscript = os.path.dirname(os.path.abspath(serverscript))  # serverscript is passed in on the command line via the python command
-socketscript = os.path.join(os.path.dirname(socketscript), 'shared', 'sockets.py')
+socketscript = os.path.join(os.path.dirname(socketscript), 'shared', 'serverctl.py')
 
 execfile(socketscript)
-#exec(open(socketscript, "r").read())
+
+gimpctlsrvlogger = getcustomlogger('gimp control server')
 
 def onexportrequest(conn, data):
     conn.send("processing export server request signal %s" % data)
@@ -45,8 +48,5 @@ def onexportrequest(conn, data):
                 except msg:
                     print(msg)
 
-def onshutdown():
-    print("stopping export server on ", PORT)
-
-print("starting export server on ", PORT)
-socket_listen(PORT, onexportrequest, onshutdown)
+gimpctlsrvlogger.warn("starting export server on %s", PORT)
+socket_listen(PORT, onexportrequest)

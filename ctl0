@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys
-from blender.blender_ctl import *
-from gimp.gimp_ctl import *
+from blender.blenderctl import *
+from gimp.gimpctl import *
 
 app_name = sys.argv[1]
 

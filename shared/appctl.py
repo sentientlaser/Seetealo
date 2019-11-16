@@ -1,31 +1,31 @@
 
 import sys, os, subprocess, psutil
-from shared.sockets import socket_send
+from shared.serverctl import socket_send
 
 class AbstractApp:
     def __init__(this, config):
         this.config = config
         this.main = Main(this.config)
         this.pidfile = PidFile(this.config)
-        this.sendsignal = SendSignal(this.config, this.pidfile)
-        this.shutdownapp = ShutdownApp(this.config, this.pidfile, this.sendsignal)
-        this.startupapp = StartupApp(this.config, this.pidfile, this.sendsignal)
+        this.signalhandler = Signal(this.config, this.pidfile)
+        this.stophandler = Stop(this.config, this.pidfile, this.signalhandler)
+        this.starthandler = Start(this.config, this.pidfile, this.signalhandler)
         this.serverscript = this.main.relative(this.config.server_file)
         this.startup_args = []
-
+        this.logger = this.config.logger
 
     def startup(this, args = None):
         if not args: args = this.main.args()
-        argpack = this.startupapp.pack(this.startup_args, args)
-        this.startupapp.invoke(argpack)
+        argpack = this.starthandler.pack(this.startup_args, args)
+        this.starthandler.invoke(argpack)
 
     def shutdown(this):
-        this.shutdownapp.invoke()
+        this.stophandler.invoke()
 
     def signal(this, args = None):
         if not args: args = this.main.args()
-        sigpack = this.sendsignal.pack(this.config.signal_command_mappings)
-        this.sendsignal.invoke(sigpack, args)
+        sigpack = this.signalhandler.pack(this.config.signal_command_mappings)
+        this.signalhandler.invoke(sigpack, args)
 
     def restart(this, args = None):
         try:
@@ -37,8 +37,8 @@ class AbstractApp:
 
     def make_main_fn(this):
         return this.main.create({
-            "startup"  : this.startup,
-            "shutdown" : this.shutdown,
+            "start"  : this.startup,
+            "stop" : this.shutdown,
             "signal"   : this.signal,
             "restart"  : this.restart
         })
@@ -106,8 +106,7 @@ class PidFile:
     def remove(this):
         if this.exists(): os.remove(this.path())
 
-class SendSignal:
-
+class Signal:
     def __init__(this, config, pidfile):
         this.config = config
         this.pidfile = pidfile
@@ -133,35 +132,36 @@ class SendSignal:
         socket_send(this.config.port, '!X')
 
 
-class ShutdownApp:
+class Stop:
 
     def __init__(this, config, pidfile, sendsignal):
         this.config = config
         this.pidfile = pidfile
-        this.sendsignal = sendsignal
+        this.signalhandler = sendsignal
+        this.logger = this.config.logger
 
     def invoke(this):
         this.pidfile.check("no pid file for %s found, nothing to do" % this.config.app_name, PidFile.negate)
         try:
             try:
-                this.sendsignal.stop()
+                this.signalhandler.stop()
             except ConnectionRefusedError as e:
-                print("Server not running, skipping")
+                this.logger.warning("Server not running, skipping")
             proc = psutil.Process(this.pidfile.get())
             for child in proc.children(recursive=True):
                 child.kill()
             proc.kill()
         except psutil.NoSuchProcess:
-            print("no %s process detected... just cleaning up" % this.config.app_name)
+            this.logger.exception("no %s process detected... just cleaning up" % this.config.app_name)
         finally:
             this.pidfile.remove()
 
-class StartupApp:
+class Start:
 
     def __init__(this, config, pidfile, sendsignal):
         this.config = config
         this.pidfile = pidfile
-        this.sendsignal = sendsignal
+        this.signalhandler = sendsignal
 
     def start(this, cmd_arr):
         proc = subprocess.Popen([this.config.app_name] + cmd_arr)

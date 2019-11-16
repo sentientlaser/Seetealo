@@ -1,12 +1,14 @@
 import os
-from shared.app_ctl import *
+from shared.appctl import *
+from shared.serverctl import getcustomlogger
 
 class Config:
     def __init__(this):
         this.port = 9090
         this.app_name = 'gimp'
-        this.server_file = "gimp/gimp_ctl_server.py"
+        this.server_file = "gimp/gimpctlserver.py"
         this.signal_command_mappings = {'save':'S', 'export':'E'}
+        this.logger = getcustomlogger('gimp control')
 
 class Gimp(AbstractApp):
     def __init__(this):
