@@ -3,3 +3,5 @@ fiddle
 __pycache__
 test-asset/*.png
 **/*.pyc
+**/*.blend1
+**/*.fbx

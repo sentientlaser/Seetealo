@@ -35,15 +35,16 @@ def socket_listen(port, action, shutdown = None, consume_size = 16, shutdown_com
         socketslogger.warn("starting server on port %s", port)
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Fixes 'TIME_WAIT' issue
             socketslogger.debug("socket acquired %s", sock)
             sock.bind(('', int(port)))
             socketslogger.debug("socket bound to port %s", port)
-            backlog = 5
+            backlog = 0
             sock.listen(backlog)
             socketslogger.debug("socket listening, allowing %s backlogged connections", backlog)
             while True:
                conn, addr = sock.accept()
-               socketslogger.info("socket is listening on port %s", port)
+               socketslogger.info("socket connection accepted %s", addr)
                try:
                    while True:
                        data = conn.recv(consume_size).strip()
@@ -61,6 +62,7 @@ def socket_listen(port, action, shutdown = None, consume_size = 16, shutdown_com
                    raise x
                finally:
                    conn.close()
+                   socketslogger.debug("closed connection %s", addr)
         finally:
             sock.close()
             if shutdown: shutdown()
