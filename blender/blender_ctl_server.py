@@ -27,7 +27,7 @@ def server_init():
     def onshutdown():
         print("stopping export server on %s" % port())
 
-    print("starting export server on %s"  port())
+    print("starting export server on %s" % port())
     socket_listen(port(), onrequest, onshutdown)
 
 ## Named `startup_server` to preserve consistency with other files
