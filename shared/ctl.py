@@ -1,94 +1,77 @@
 
 import sys, os, subprocess, psutil
-
-## TODO: makse these modules
-
-exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared', 'sockets.py')).read())
-
+import shared.sockets
 
 class Main:
-    #TODO: make this a static property
+    def __init__(this, config):
+        this.config = config
+
     @staticmethod
     def filepath():
-        return os.path.dirname(os.path.abspath(__file__))
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # XXX: Can be bittle `/usr/bin` -> '/usr' but `/usr/bin/` - '/usr/bin'
 
-    @staticmethod
-    def relative(path):
-        return os.path.join(Main.filepath(), path)
-
-    #TODO: make this a static property
-    @staticmethod
-    def command():
-        return sys.argv[1]
+    def relative(this, path):
+        return os.path.join(Main.filepath(), path) # XXX: This shoudl fix any brittleness in the filepath
 
     #TODO: make this a static property
-    @staticmethod
-    def args():
-        return sys.argv[2:]
+    def command(this):
+        try:
+            return sys.argv[2]
+        except IndexError:
+            raise ValueError("Command not supplied")
 
-    @staticmethod
-    def create(cmd_dict):
+    #TODO: make this a static property
+    def args(this):
+        return sys.argv[3:]
+
+    def create(this, cmd_dict):
         def fn():
-            if not Main.command() in cmd_dict: raise ValueError("command %s not understood,  options are %s" % (Main.command()))
+            if not this.command() in cmd_dict: raise ValueError("command %s not understood,  options are %s" % (this.command(), cmd_dict.keys()))
             for cmd in cmd_dict:
-                if cmd == Main.command():
+                if cmd == this.command():
                     command = cmd_dict[cmd]
                     command()
         return fn
 
-negate = lambda x: not x
-identity = lambda x: x ## should never need this, it's just to make use PidFile.check is only called with this or 'negate'
-
 class PidFile:
 
+    negate = lambda x: not x
+    identity = lambda x: x ## should never need this, it's just to make use PidFile.check is only called with this or 'negate'
+
+    def __init__(this, config):
+        this.config = config
+
     #TODO: make this a static property
-    @staticmethod
-    def path():
-        return os.path.join(Main.filepath(), ".%s.pid" % app_name())
+    def path(this):
+        return os.path.join(Main.filepath(), ".%s.pid" % this.config.app_name)
 
-    @staticmethod
-    def exists():
-        return os.path.exists(PidFile.path()) and os.path.isfile(PidFile.path())
+    def exists(this):
+        return os.path.exists(this.path()) and os.path.isfile(this.path())
 
-    @staticmethod
-    def check(msg, negate_fn = identity):
-        if not negate_fn in [negate, identity]: raise ValueError("only identity or negate may be passed to check")
-        if negate_fn(PidFile.exists()):
+    def check(this, msg, negate_fn = identity):
+        if not negate_fn in [PidFile.negate, PidFile.identity]: raise ValueError("only identity or negate may be passed to check")
+        if negate_fn(this.exists()):
             raise EnvironmentError(msg)
         return True
 
-    @staticmethod
-    def get():
-        with open(PidFile.path(), "r") as pidfile_handle:
+    def get(this):
+        with open(this.path(), "r") as pidfile_handle:
             return int(pidfile_handle.read())
 
-    @staticmethod
-    def set(pid):
-        with open(PidFile.path(), "w") as pidfile_handle:
+    def set(this, pid):
+        with open(this.path(), "w") as pidfile_handle:
             pidfile_handle.write(str(pid))
 
-    @staticmethod
-    def remove():
-        if PidFile.exists(): os.remove(PidFile.path())
-
-class ShutdownApp:
-    @staticmethod
-    def invoke():
-        PidFile.check("no pid file for %s found, nothing to do" % app_name(), negate)
-        try:
-            proc = psutil.Process(PidFile.get())
-            SendSignal.stop()
-            for child in proc.children(recursive=True):
-                child.kill()
-            proc.kill()
-        except psutil.NoSuchProcess:
-            print("no %s process detected... just cleaning up" % app_name())
-        finally:
-            PidFile.remove()
+    def remove(this):
+        if this.exists(): os.remove(this.path())
 
 class SendSignal:
-    @staticmethod
-    def pack(sig_dict):
+
+    def __init__(this, config, pidfile):
+        this.config = config
+        this.pidfile = pidfile
+
+    def pack(this, sig_dict):
         def fn(args):
             if 'stop' in args:
                 return '!X'
@@ -101,29 +84,52 @@ class SendSignal:
                 return signal
         return fn
 
-    @staticmethod
-    def invoke(pack_signal_fn, args):
+    def invoke(this, pack_signal_fn, args):
         print(pack_signal_fn(args))
-        PidFile.check("pid file not found, please start %s" % app_name(), negate)
-        socket_send(port(), pack_signal_fn(args))
+        pidfile.check("pid file not found, please start %s" % this.config.app_name, PidFile.negate)
+        socket_send(this.config.port, pack_signal_fn(args))
 
-    @staticmethod
-    def stop():
-        socket_send(port(), '!X')
+    def stop(this):
+        socket_send(this.config.port, '!X')
+
+
+class ShutdownApp:
+
+    def __init__(this, config, pidfile, sendsignal):
+        this.config = config
+        this.pidfile = pidfile
+        this.sendsignal = sendsignal
+
+    def invoke(this):
+        this.pidfile.check("no pid file for %s found, nothing to do" % this.config.app_name, PidFile.negate)
+        try:
+            proc = psutil.Process(this.pidfile.get())
+            sendsignal.stop()
+            for child in proc.children(recursive=True):
+                child.kill()
+            proc.kill()
+        except psutil.NoSuchProcess:
+            print("no %s process detected... just cleaning up" % this.config.app_name)
+        finally:
+            this.pidfile.remove()
 
 class StartupApp:
-    @staticmethod
-    def start(cmd_arr):
-        proc = subprocess.Popen([app_name()] + cmd_arr)
-        PidFile.set(proc.pid)
 
-    @staticmethod
-    def pack(flags, files):
+    def __init__(this, config, pidfile, sendsignal):
+        this.config = config
+        this.pidfile = pidfile
+        this.sendsignal = sendsignal
+
+    def start(this, cmd_arr):
+        proc = subprocess.Popen([this.config.app_name] + cmd_arr)
+        this.pidfile.set(proc.pid)
+
+    def pack(this, flags, files):
         def fn():
-            return [app_name()] + flags + list(map(lambda x: os.path.expanduser(x), files))
+            return flags + list(map(lambda x: os.path.expanduser(x), files))
         return fn
 
-    @staticmethod
-    def invoke(pack_cmdline_fn):
-        PidFile.check("pid file exists, either delete it or use the `shutdown` command")
-        StartupApp.start(pack_cmdline_fn())
+    def invoke(this, pack_cmdline_fn):
+        # TODO: send a ping?
+        this.pidfile.check("pid file exists, either delete it or use the `shutdown` command")
+        this.start(pack_cmdline_fn())
