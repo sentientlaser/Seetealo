@@ -2,7 +2,9 @@
 
 import os, threading, bpy
 
-exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'properties.py')).read())
+def port():
+    return 9091
+    
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared', 'sockets.py')).read())
 
 def server_init():
