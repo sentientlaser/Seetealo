@@ -1,36 +1,14 @@
-
 import os
 from shared.ctl import *
-from blender.config import Config
 
-
-class Blender:
+class Config:
     def __init__(this):
-        this.config = Config()
-        this.main = Main(this.config)
-        this.pidfile = PidFile(this.config)
-        this.sendsignal = SendSignal(this.config, this.pidfile)
-        this.shutdownapp = ShutdownApp(this.config, this.pidfile, this.sendsignal)
-        this.startupapp = StartupApp(this.config, this.pidfile, this.sendsignal)
+        this.port = 9091
+        this.app_name = 'blender'
+        this.server_file = "blender/blender_ctl_server.py"
+        this.signal_command_mappings = {'rltex':'R', 'export':'E'}
 
-
-    def startup(this, args = None):
-        if not args: args = this.main.args()
-        serverscript = this.main.relative(this.config.server_file)
-        argpack = this.startupapp.pack(['--enable-autoexec', '--python', serverscript], args)
-        this.startupapp.invoke(argpack)
-
-    def shutdown(this):
-        this.shutdownapp.invoke()
-
-    def signal(this, args = None):
-        if not args: args = this.main.args()
-        sigpack = this.sendsignal.pack(this.config.signal_command_mappings)
-        this.sendsignal.invoke(sigpack, args)
-
-    def make_main_fn(this):
-        return this.main.create({
-            "startup"  : this.startup,
-            "shutdown" : this.shutdown,
-            "signal"   : this.signal
-        })
+class Blender(AbstractApp):
+    def __init__(this):
+        AbstractApp.__init__(this, Config())
+        this.startup_args = ['--enable-autoexec', '--python', serverscript]
