@@ -2,3 +2,4 @@ fiddle
 **/.*.pid
 __pycache__
 test-asset/*.png
+**/*.pyc
