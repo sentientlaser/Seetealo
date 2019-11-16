@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import sys
 from blender.blender_ctl import *
-from blender.gimp_ctl import *
+from gimp.gimp_ctl import *
 
 app_name = sys.argv[1]
 
 if (app_name == 'blender'):
     main = Blender().make_main_fn()
-if (app_name == 'gimp'):
+elif (app_name == 'gimp'):
     main = Gimp().make_main_fn()
 else:
     print("app `%s` is unkown" % app_name)

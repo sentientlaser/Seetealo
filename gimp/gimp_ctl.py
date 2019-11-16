@@ -1,5 +1,5 @@
 import os
-from shared.ctl import *
+from shared.app_ctl import *
 
 class Config:
     def __init__(this):
@@ -13,5 +13,5 @@ class Gimp(AbstractApp):
         AbstractApp.__init__(this, Config())
         this.startup_args = [
             '--batch-interpreter=python-fu-eval',
-            '-b', 'exec(open("%s").read()); startup_server();' % this.serverscript
+            '-b', 'serverscript = "%s"; exec(open(serverscript).read())' % this.serverscript
             ]

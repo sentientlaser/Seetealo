@@ -4,48 +4,49 @@ PORT = 9090
 import sys, os, re, itertools        ### basic stuffW
 from gimpfu import *
 
-exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared', 'sockets.py')).read())
+socketscript = os.path.dirname(os.path.abspath(serverscript))  # serverscript is passed in on the command line via the python command
+socketscript = os.path.join(os.path.dirname(socketscript), 'shared', 'sockets.py')
 
-# detached from the plugin api so I can see if I can just run it as a startup script
-def startup_server():
-    def onexportrequest(conn, data):
-        print("processing export server request", data)
-        conn.send("data '%s'\n" % data)
+execfile(socketscript)
+#exec(open(socketscript, "r").read())
 
-        for image in gimp.image_list():
-            filename = image.filename
-            conn.send("processing file '%s'\n" % filename)
-            if not filename:
-                conn.send("skipped unnamed file\n")
-                continue
+def onexportrequest(conn, data):
+    conn.send("processing export server request signal %s" % data)
 
-            if not re.match(r".*\.xcf$", filename):
-                conn.send("skipped non xcf file '%s'\n" % filename)
-                continue
+    for image in gimp.image_list():
+        filename = image.filename
+        conn.send("processing file '%s'\n" % filename)
+        if not filename:
+            conn.send("skipped unnamed file\n")
+            continue
 
-            if 'S' in data.upper():
-                drawable = pdb.gimp_image_active_drawable(image)
-                pdb.gimp_xcf_save(0, image, drawable, filename, filename)
-                conn.send("saved file '%s'\n" % filename)
+        if not re.match(r".*\.xcf$", filename):
+            conn.send("skipped non xcf file '%s'\n" % filename)
+            continue
 
-            if 'E' in data.upper():
+        if 'S' in data.upper():
+            drawable = pdb.gimp_image_active_drawable(image)
+            pdb.gimp_xcf_save(0, image, drawable, filename, filename)
+            conn.send("saved file '%s'\n" % filename)
+
+        if 'E' in data.upper():
+            try:
+                filename_png = re.sub(r"xcf$", "png", filename)
+                pdb.gimp_selection_none(image)
+                pdb.gimp_edit_copy_visible(image)
+                image_png = pdb.gimp_edit_paste_as_new()
+                drawable_png = pdb.gimp_image_active_drawable(image_png)
+                pdb.file_png_save(image_png, drawable_png, filename_png, filename_png, 1, 9, 1, 1, 1, 1, 1)
+
+                conn.send("exported file '%s'\n" % filename_png)
+            finally:
                 try:
-                    filename_png = re.sub(r"xcf$", "png", filename)
-                    pdb.gimp_selection_none(image)
-                    pdb.gimp_edit_copy_visible(image)
-                    image_png = pdb.gimp_edit_paste_as_new()
-                    drawable_png = pdb.gimp_image_active_drawable(image_png)
-                    pdb.file_png_save(image_png, drawable_png, filename_png, filename_png, 1, 9, 1, 1, 1, 1, 1)
+                    pdb.gimp_image_delete(image_png)
+                except msg:
+                    print(msg)
 
-                    conn.send("exported file '%s'\n" % filename_png)
-                finally:
-                    try:
-                        pdb.gimp_image_delete(image_png)
-                    except msg:
-                        print(msg)
+def onshutdown():
+    print("stopping export server on ", PORT)
 
-    def onshutdown():
-        print("stopping export server on ", PORT)
-
-    print("starting export server on ", PORT)
-    socket_listen(PORT, onexportrequest, onshutdown)
+print("starting export server on ", PORT)
+socket_listen(PORT, onexportrequest, onshutdown)

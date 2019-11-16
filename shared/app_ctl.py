@@ -126,7 +126,6 @@ class SendSignal:
         return fn
 
     def invoke(this, pack_signal_fn, args):
-        print(pack_signal_fn(args))
         this.pidfile.check("pid file not found, please start %s" % this.config.app_name, PidFile.negate)
         socket_send(this.config.port, pack_signal_fn(args))
 

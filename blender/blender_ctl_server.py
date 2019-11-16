@@ -4,8 +4,11 @@ import os, threading, bpy
 
 def port():
     return 9091
-    
-exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'shared', 'sockets.py')).read())
+
+serverscript = os.path.dirname(os.path.abspath(__file__))
+serverscript =  os.path.dirname(serverscript)
+serverscript =  os.path.join(serverscript, 'shared', 'sockets.py')
+exec(open(serverscript, "r").read())
 
 def server_init():
     def reload_textures():
@@ -17,15 +20,14 @@ def server_init():
                     area.tag_redraw()
 
     def onrequest(conn, data):
-        print("processing request", data)
-        conn.send(bytes("data '%s'\n" % data, 'utf-8'))
+        conn.send(_enc("processing request '%s'\n" % data))
         if data.upper() == 'R':
             reload_textures()
 
     def onshutdown():
-        print("stopping export server on ", port())
+        print("stopping export server on %s" % port())
 
-    print("starting export server on ", port())
+    print("starting export server on %s"  port())
     socket_listen(port(), onrequest, onshutdown)
 
 ## Named `startup_server` to preserve consistency with other files
